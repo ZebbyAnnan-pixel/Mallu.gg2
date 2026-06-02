@@ -209,8 +209,79 @@ const ctx=canvas.getContext("2d");
 let mode="normal",dinoY=170,velocity=0,gravity=0.7,jumping=false;
 let speed=6,score=0,gameRunning=false;
 let obstacles=[];
+let clouds=[];
 let currentModeConfig=null;
 let jumpSound=null;
+
+// Draw dot-style cactus
+function drawCactus(x, y, width, height) {
+  const dotSize = 4;
+  const dotSpacing = 6;
+  
+  // Draw cactus outline using dots
+  for (let i = 0; i < width; i += dotSpacing) {
+    for (let j = 0; j < height; j += dotSpacing) {
+      ctx.fillStyle = "#8BC34A";
+      ctx.beginPath();
+      ctx.arc(x + i, y + j, dotSize, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  
+  // Draw left arm
+  const armY = y + height * 0.3;
+  for (let i = 0; i < 12; i += dotSpacing) {
+    for (let j = 0; j < 6; j += dotSpacing) {
+      ctx.fillStyle = "#8BC34A";
+      ctx.beginPath();
+      ctx.arc(x - i, armY + j, dotSize, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  
+  // Draw right arm
+  for (let i = 0; i < 12; i += dotSpacing) {
+    for (let j = 0; j < 6; j += dotSpacing) {
+      ctx.fillStyle = "#8BC34A";
+      ctx.beginPath();
+      ctx.arc(x + width + i, armY + j, dotSize, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+// Draw clouds
+function drawCloud(x, y) {
+  ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+  
+  const cloudWidth = 60;
+  const cloudHeight = 25;
+  
+  // Draw cloud using circles
+  ctx.beginPath();
+  ctx.arc(x, y, 15, 0, Math.PI * 2);
+  ctx.fill();
+  
+  ctx.beginPath();
+  ctx.arc(x + 20, y, 18, 0, Math.PI * 2);
+  ctx.fill();
+  
+  ctx.beginPath();
+  ctx.arc(x + 40, y, 15, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// Initialize clouds
+function initializeClouds() {
+  clouds = [];
+  for (let i = 0; i < 3; i++) {
+    clouds.push({
+      x: Math.random() * canvas.width,
+      y: 30 + Math.random() * 40,
+      speed: 1 + Math.random() * 1.5
+    });
+  }
+}
 
 function startGame(selectedMode){
 if(!savedUsername){alert("Confirm username first!");return;}
@@ -229,6 +300,7 @@ speed = currentModeConfig.initialSpeed;
 score = 0;
 
 obstacles=[];
+initializeClouds();
 document.getElementById("menu").style.display="none";
 document.getElementById("leaderboard").style.display="none";
 canvas.style.display="block";
@@ -261,6 +333,19 @@ obstacles.push({x:canvas.width+40,width:20,height:randomHeight});
 function update(){
 ctx.clearRect(0,0,canvas.width,canvas.height);
 
+// Draw clouds
+clouds.forEach(cloud => {
+  cloud.x -= cloud.speed;
+  
+  // Reset cloud position if it goes off screen
+  if (cloud.x < -80) {
+    cloud.x = canvas.width + 40;
+    cloud.y = 30 + Math.random() * 40;
+  }
+  
+  drawCloud(cloud.x, cloud.y);
+});
+
 velocity+=gravity;
 dinoY+=velocity;
 if(dinoY>=currentModeConfig.dinoStartY){dinoY=currentModeConfig.dinoStartY;velocity=0;jumping=false;}
@@ -271,8 +356,8 @@ spawnObstacle();
 for(let i=0;i<obstacles.length;i++){
 obstacles[i].x-=speed;
 
-ctx.fillStyle=currentModeConfig.obstacleColor;
-ctx.fillRect(obstacles[i].x,currentModeConfig.groundY-obstacles[i].height,obstacles[i].width,obstacles[i].height);
+// Draw dot-style cactus instead of rectangle
+drawCactus(obstacles[i].x, currentModeConfig.groundY-obstacles[i].height, obstacles[i].width, obstacles[i].height);
 
 let dinoLeft=80,dinoRight=130,dinoTop=dinoY,dinoBottom=dinoY+currentModeConfig.dinoHeight;
 let cactusLeft=obstacles[i].x,cactusRight=obstacles[i].x+obstacles[i].width;
