@@ -1,6 +1,6 @@
 # Mallu.gg2 🎮
 
-A static web-based project built with HTML. This repository serves as the frontend containing multimedia elements like audio and images. 
+A static meme-based project built with HTML. This repository serves as a birthday trolls containing multimedia elements like audio and images. 
 
 ## 🚀 Features
 
