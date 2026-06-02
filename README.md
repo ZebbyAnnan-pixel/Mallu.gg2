@@ -58,6 +58,7 @@ If you'd like to improve the project, please fork the repository and create a pu
 
 **ZebbyAnnan-pixel**
 * GitHub: [@ZebbyAnnan-pixel](https://github.com/ZebbyAnnan-pixel)
+* Insta: [@i.wziee](https://www.instagram.com/i.wziee?igsh=MTZqbXplNDY0b253Yw%3D%3D)
 
 ---
 *If you find this project interesting or helpful, please consider giving it a ⭐️!*
