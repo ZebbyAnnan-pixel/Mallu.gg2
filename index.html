@@ -60,8 +60,7 @@ button{width:80%;font-size:16px;}
 </div>
 <p id="nameStatus">Username confirmed!</p>
 
-<button class="primaryBtn" onclick="startGame('normal')">Normal Mode</button>
-<button class="secondaryBtn" onclick="startGame('rishi')">Rishi Mode</button>
+<div id="modeButtons"></div>
 </div>
 </div>
 
@@ -101,6 +100,8 @@ setDoc,
 onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+import { GAME_MODES, getMode, getAvailableModes } from "./modes.js";
+
 const firebaseConfig = {
 apiKey: "AIzaSyA9I4oU9khFGycZyIOvHcg3p6OrhSa1GzM",
 authDomain: "malludino-gg.firebaseapp.com",
@@ -113,18 +114,29 @@ appId: "1:298331255490:web:87440667c24a55c289c15b"
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-/* Images */
-const normalDinoImg = new Image();
-normalDinoImg.src = "images/surya.png";
-
-const rishiDinoImg = new Image();
-rishiDinoImg.src = "images/rishi.png";
+/* Load images for all modes */
+const modeImages = {};
+Object.entries(GAME_MODES).forEach(([modeKey, modeConfig]) => {
+  const img = new Image();
+  img.src = modeConfig.character;
+  modeImages[modeKey] = img;
+});
 
 /* Death Sound */
 const deathSound = new Audio("audio/ayoo.mp3");
-const jumpSound = new Audio("audio/jumpeffect.rishi.mp3");
-jumpSound.volume = 1;
 let savedUsername="";
+
+// Render mode buttons dynamically
+function renderModeButtons() {
+  const container = document.getElementById("modeButtons");
+  const modes = getAvailableModes();
+  
+  container.innerHTML = modes.map((mode, index) => {
+    const btnClass = index === 0 ? "primaryBtn" : "secondaryBtn";
+    return `<button class="${btnClass}" onclick="startGame('${mode.id}')">${mode.name}</button>`;
+  }).join("");
+}
+
 document.getElementById("confirmNameBtn").addEventListener("click",()=>{
 const input=document.getElementById("usernameInput").value.trim();
 if(input.length<2){alert("Enter valid username!");return;}
@@ -186,7 +198,10 @@ console.error("Leaderboard listener error:", error);
 });
 }
 
-document.addEventListener("DOMContentLoaded",setupLeaderboardListener);
+document.addEventListener("DOMContentLoaded",() => {
+  renderModeButtons();
+  setupLeaderboardListener();
+});
 
 const canvas=document.getElementById("gameCanvas");
 const ctx=canvas.getContext("2d");
@@ -194,10 +209,25 @@ const ctx=canvas.getContext("2d");
 let mode="normal",dinoY=170,velocity=0,gravity=0.7,jumping=false;
 let speed=6,score=0,gameRunning=false;
 let obstacles=[];
+let currentModeConfig=null;
+let jumpSound=null;
 
 function startGame(selectedMode){
 if(!savedUsername){alert("Confirm username first!");return;}
 mode=selectedMode;
+currentModeConfig = getMode(mode);
+
+// Load jump sound for this mode
+jumpSound = new Audio(currentModeConfig.jumpSound);
+jumpSound.volume = 1;
+
+// Initialize game variables from mode config
+dinoY = currentModeConfig.dinoStartY;
+velocity = 0;
+gravity = currentModeConfig.gravity;
+speed = currentModeConfig.initialSpeed;
+score = 0;
+
 obstacles=[];
 document.getElementById("menu").style.display="none";
 document.getElementById("leaderboard").style.display="none";
@@ -211,7 +241,7 @@ gameLoop();
 
 function jump(){
 if(!jumping && gameRunning){
-velocity = -14;
+velocity = currentModeConfig.jumpForce;
 jumping = true;
 
 try{
@@ -233,7 +263,7 @@ ctx.clearRect(0,0,canvas.width,canvas.height);
 
 velocity+=gravity;
 dinoY+=velocity;
-if(dinoY>=170){dinoY=170;velocity=0;jumping=false;}
+if(dinoY>=currentModeConfig.dinoStartY){dinoY=currentModeConfig.dinoStartY;velocity=0;jumping=false;}
 
 if(obstacles.length===0||obstacles[obstacles.length-1].x<canvas.width-350)
 spawnObstacle();
@@ -241,12 +271,12 @@ spawnObstacle();
 for(let i=0;i<obstacles.length;i++){
 obstacles[i].x-=speed;
 
-ctx.fillStyle="#1e8449";
-ctx.fillRect(obstacles[i].x,210-obstacles[i].height,obstacles[i].width,obstacles[i].height);
+ctx.fillStyle=currentModeConfig.obstacleColor;
+ctx.fillRect(obstacles[i].x,currentModeConfig.groundY-obstacles[i].height,obstacles[i].width,obstacles[i].height);
 
-let dinoLeft=80,dinoRight=130,dinoTop=dinoY,dinoBottom=dinoY+50;
+let dinoLeft=80,dinoRight=130,dinoTop=dinoY,dinoBottom=dinoY+currentModeConfig.dinoHeight;
 let cactusLeft=obstacles[i].x,cactusRight=obstacles[i].x+obstacles[i].width;
-let cactusTop=210-obstacles[i].height,cactusBottom=210;
+let cactusTop=currentModeConfig.groundY-obstacles[i].height,cactusBottom=currentModeConfig.groundY;
 
 if(dinoRight>cactusLeft&&dinoLeft<cactusRight&&dinoBottom>cactusTop&&dinoTop<cactusBottom){
 endGame();
@@ -260,12 +290,12 @@ document.getElementById("score").innerText="Score: "+score;
 }
 
 ctx.beginPath();
-ctx.moveTo(0,210);
-ctx.lineTo(canvas.width,210);
+ctx.moveTo(0,currentModeConfig.groundY);
+ctx.lineTo(canvas.width,currentModeConfig.groundY);
 ctx.stroke();
 
-const currentImg=mode==="normal"?normalDinoImg:rishiDinoImg;
-ctx.drawImage(currentImg,80,dinoY,50,50);
+const currentImg=modeImages[mode];
+ctx.drawImage(currentImg,80,dinoY,currentModeConfig.dinoWidth,currentModeConfig.dinoHeight);
 }
 
 function gameLoop(){
@@ -284,7 +314,7 @@ saveScore(savedUsername,score);
 }
 
 function restartGame(){
-obstacles=[];dinoY=170;velocity=0;score=0;
+obstacles=[];dinoY=currentModeConfig.dinoStartY;velocity=0;score=0;
 document.getElementById("score").innerText="Score: 0";
 document.getElementById("gameOver").style.display="none";
 gameRunning=true;
