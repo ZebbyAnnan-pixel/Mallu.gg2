@@ -29,7 +29,7 @@ canvas{display:none;margin:40px auto;background:white;border-radius:10px;box-sha
 #nameStatus{display:none;color:#2ecc71;font-size:13px;margin-bottom:15px;}
 #leaderboard{margin:40px auto;width:90%;max-width:500px;}
 .lbTitle{font-weight:bold;margin-bottom:15px;}
-.lbItem{display:flex;align-items:center;justify-content:space-between;background:#1e1e1e;color:white;padding:12px 15px;border-radius:12px;margin-bottom:10px;font-size:14px;}
+.lbItem{display:flex;align-items:center;justify-content:space-between;background:#1e1e1e;color:white;padding:12px 15px;border-radius:12px;margin-bottom:10px;font-size:14px;transition:0.3s;}
 .lbLeft{display:flex;align-items:center;gap:10px;}
 .lbRank{width:25px;text-align:center;opacity:0.7;}
 .lbAvatar{width:30px;height:30px;border-radius:50%;background:#444;display:flex;align-items:center;justify-content:center;font-size:12px;}
@@ -97,7 +97,8 @@ orderBy,
 limit,
 doc,
 getDoc,
-setDoc
+setDoc,
+onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -154,13 +155,9 @@ async function saveScore(username, score) {
             timestamp: Date.now()
         });
     }
-
-    loadLeaderboard();
 }
 
-async function loadLeaderboard(){
-const q=query(collection(db,"scores"),orderBy("score","desc"),limit(10));
-const snapshot=await getDocs(q);
+function updateLeaderboardUI(snapshot) {
 let html=`<div class="lbTitle">🏆 Global Leaderboard</div>`;
 let rank=1;
 snapshot.forEach(doc=>{
@@ -179,7 +176,17 @@ rank++;
 });
 document.getElementById("leaderboard").innerHTML=html;
 }
-document.addEventListener("DOMContentLoaded",loadLeaderboard);
+
+function setupLeaderboardListener(){
+const q=query(collection(db,"scores"),orderBy("score","desc"),limit(10));
+onSnapshot(q, (snapshot) => {
+updateLeaderboardUI(snapshot);
+}, (error) => {
+console.error("Leaderboard listener error:", error);
+});
+}
+
+document.addEventListener("DOMContentLoaded",setupLeaderboardListener);
 
 const canvas=document.getElementById("gameCanvas");
 const ctx=canvas.getContext("2d");
@@ -291,7 +298,6 @@ document.getElementById("exitBtn").style.display="none";
 document.getElementById("gameOver").style.display="none";
 canvas.style.display="none";
 document.getElementById("menu").style.display="block";
-loadLeaderboard();
 }
 
 window.startGame=startGame;
